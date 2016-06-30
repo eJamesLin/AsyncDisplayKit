@@ -16,7 +16,7 @@ typedef void (^ASDataControllerCompletionBlock)(NSArray<ASCellNode *> *nodes, NS
 
 @interface ASDataController (Subclasses)
 
-#pragma mark - Internal editing & completed store querying
+#pragma mark - Internal pending, editing & completed store querying
 
 /**
  * Provides a collection of index paths for nodes of the given kind that are currently in the editing store
@@ -32,6 +32,10 @@ typedef void (^ASDataControllerCompletionBlock)(NSArray<ASCellNode *> *nodes, NS
  * Read only access to the underlying completed nodes of the given kind
  */
 - (NSMutableArray *)completedNodesOfKind:(NSString *)kind;
+
+- (void)invalidateDataSourceItemCounts;
+
+- (NSArray <NSNumber *> *)itemCountsFromDataSource;
 
 #pragma mark - Node sizing
 

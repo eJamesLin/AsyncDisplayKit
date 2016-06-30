@@ -67,20 +67,6 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType);
 /// NOTE: Calling this method will cause the changeset to convert all reloads into delete/insert pairs.
 - (void)markCompletedWithNewItemCounts:(NSArray <NSNumber *> *)newItemCounts;
 
-/**
- @abstract Return sorted changes of the given type, grouped by animation options.
- 
- Items deleted from deleted sections are not reported.
- Items inserted into inserted sections are not reported.
- Items reloaded in reloaded sections are not reported.
- 
- The safe order for processing change groups is:
- - Reloaded sections & reloaded items
- - Deleted items, descending order
- - Deleted sections, descending order
- - Inserted sections, ascending order
- - Inserted items, ascending order
- */
 - (nullable NSArray <_ASHierarchySectionChange *> *)sectionChangesOfType:(_ASHierarchyChangeType)changeType;
 - (nullable NSArray <_ASHierarchyItemChange *> *)itemChangesOfType:(_ASHierarchyChangeType)changeType;
 
