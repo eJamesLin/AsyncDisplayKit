@@ -54,13 +54,17 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
 
 @interface _ASHierarchyChangeSet ()
 
+/// Original inserts + reloads. Nil until sort&coalesce.
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *insertItemChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *originalInsertItemChanges;
+/// Original deletes + reloads. Nil until sort&coalesce.
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *deleteItemChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *originalDeleteItemChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *reloadItemChanges;
+/// Original inserts + reloads. Nil until sort&coalesce.
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *insertSectionChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *originalInsertSectionChanges;
+/// Original deletes + reloads. Nil until sort&coalesce.
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *deleteSectionChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *originalDeleteSectionChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *reloadSectionChanges;
@@ -85,15 +89,11 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
     _oldItemCounts = [oldItemCounts copy];
     
     _originalInsertItemChanges = [NSMutableArray new];
-    _insertItemChanges = [NSMutableArray new];
     _originalDeleteItemChanges = [NSMutableArray new];
-    _deleteItemChanges = [NSMutableArray new];
     _reloadItemChanges = [NSMutableArray new];
     
     _originalInsertSectionChanges = [NSMutableArray new];
-    _insertSectionChanges = [NSMutableArray new];
     _originalDeleteSectionChanges = [NSMutableArray new];
-    _deleteSectionChanges = [NSMutableArray new];
     _reloadSectionChanges = [NSMutableArray new];
   }
   return self;
@@ -229,6 +229,8 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
     // Give these their "pre-reloads" values. Once we add in the reloads we'll re-process them.
     _deletedSections = [_ASHierarchySectionChange allIndexesInSectionChanges:_deleteSectionChanges];
     _insertedSections = [_ASHierarchySectionChange allIndexesInSectionChanges:_insertSectionChanges];
+    _deleteSectionChanges = [_originalDeleteSectionChanges mutableCopy];
+    _insertSectionChanges = [_originalInsertSectionChanges mutableCopy];
     
     for (_ASHierarchySectionChange *change in _reloadSectionChanges) {
       NSIndexSet *newSections = [change.indexSet as_indexesByMapping:^(NSUInteger idx) {
@@ -250,6 +252,9 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
     _insertedSections = [_ASHierarchySectionChange allIndexesInSectionChanges:_insertSectionChanges];
 
     // Split reloaded items into [delete(oldIndexPath), insert(newIndexPath)]
+    
+    _deleteItemChanges = [_originalDeleteItemChanges mutableCopy];
+    _insertItemChanges = [_originalInsertItemChanges mutableCopy];
     
     NSDictionary *insertedIndexPathsMap = [_ASHierarchyItemChange sectionToIndexSetMapFromChanges:_insertItemChanges ofType:_ASHierarchyChangeTypeInsert];
     NSDictionary *deletedIndexPathsMap = [_ASHierarchyItemChange sectionToIndexSetMapFromChanges:_deleteItemChanges ofType:_ASHierarchyChangeTypeDelete];
