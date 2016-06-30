@@ -46,6 +46,8 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType);
 
 @interface _ASHierarchyChangeSet : NSObject
 
+- (instancetype)initWithOldData:(NSArray <NSNumber *> *)oldItemCounts NS_DESIGNATED_INITIALIZER;
+
 /// @precondition The change set must be completed.
 @property (nonatomic, strong, readonly) NSIndexSet *deletedSections;
 /// @precondition The change set must be completed.
@@ -63,7 +65,7 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType);
 
 /// Call this once the change set has been constructed to prevent future modifications to the changeset. Calling this more than once is a programmer error.
 /// NOTE: Calling this method will cause the changeset to convert all reloads into delete/insert pairs.
-- (void)markCompleted;
+- (void)markCompletedWithNewItemCounts:(NSArray <NSNumber *> *)newItemCounts;
 
 /**
  @abstract Return sorted changes of the given type, grouped by animation options.

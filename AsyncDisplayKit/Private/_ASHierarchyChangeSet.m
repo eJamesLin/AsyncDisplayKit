@@ -55,25 +55,44 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
 @interface _ASHierarchyChangeSet ()
 
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *insertItemChanges;
+@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *originalInsertItemChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *deleteItemChanges;
+@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *originalDeleteItemChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *reloadItemChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *insertSectionChanges;
+@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *originalInsertSectionChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *deleteSectionChanges;
+@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *originalDeleteSectionChanges;
 @property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *reloadSectionChanges;
 
 @end
 
-@implementation _ASHierarchyChangeSet
+@implementation _ASHierarchyChangeSet {
+  NSArray <NSNumber *> *_oldItemCounts;
+  NSArray <NSNumber *> *_newItemCounts;
+}
 
 - (instancetype)init
 {
+  ASDisplayNodeFailAssert(@"_ASHierarchyChangeSet: -init is not supported. Call -initWithOldData:");
+  return [self initWithOldData:@[]];
+}
+
+- (instancetype)initWithOldData:(NSArray<NSNumber *> *)oldItemCounts
+{
   self = [super init];
   if (self) {
+    _oldItemCounts = [oldItemCounts copy];
     
+    _originalInsertItemChanges = [NSMutableArray new];
     _insertItemChanges = [NSMutableArray new];
+    _originalDeleteItemChanges = [NSMutableArray new];
     _deleteItemChanges = [NSMutableArray new];
     _reloadItemChanges = [NSMutableArray new];
+    
+    _originalInsertSectionChanges = [NSMutableArray new];
     _insertSectionChanges = [NSMutableArray new];
+    _originalDeleteSectionChanges = [NSMutableArray new];
     _deleteSectionChanges = [NSMutableArray new];
     _reloadSectionChanges = [NSMutableArray new];
   }
@@ -82,11 +101,13 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
 
 #pragma mark External API
 
-- (void)markCompleted
+- (void)markCompletedWithNewItemCounts:(NSArray<NSNumber *> *)newItemCounts
 {
   NSAssert(!_completed, @"Attempt to mark already-completed changeset as completed.");
   _completed = YES;
+  _newItemCounts = newItemCounts;
   [self _sortAndCoalesceChangeArrays];
+  [self _validateUpdate];
 }
 
 - (NSArray *)sectionChangesOfType:(_ASHierarchyChangeType)changeType
@@ -147,28 +168,28 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
 {
   [self _ensureNotCompleted];
   _ASHierarchyItemChange *change = [[_ASHierarchyItemChange alloc] initWithChangeType:_ASHierarchyChangeTypeDelete indexPaths:indexPaths animationOptions:options presorted:NO];
-  [_deleteItemChanges addObject:change];
+  [_originalDeleteItemChanges addObject:change];
 }
 
 - (void)deleteSections:(NSIndexSet *)sections animationOptions:(ASDataControllerAnimationOptions)options
 {
   [self _ensureNotCompleted];
   _ASHierarchySectionChange *change = [[_ASHierarchySectionChange alloc] initWithChangeType:_ASHierarchyChangeTypeDelete indexSet:sections animationOptions:options];
-  [_deleteSectionChanges addObject:change];
+  [_originalDeleteSectionChanges addObject:change];
 }
 
 - (void)insertItems:(NSArray *)indexPaths animationOptions:(ASDataControllerAnimationOptions)options
 {
   [self _ensureNotCompleted];
   _ASHierarchyItemChange *change = [[_ASHierarchyItemChange alloc] initWithChangeType:_ASHierarchyChangeTypeInsert indexPaths:indexPaths animationOptions:options presorted:NO];
-  [_insertItemChanges addObject:change];
+  [_originalInsertItemChanges addObject:change];
 }
 
 - (void)insertSections:(NSIndexSet *)sections animationOptions:(ASDataControllerAnimationOptions)options
 {
   [self _ensureNotCompleted];
   _ASHierarchySectionChange *change = [[_ASHierarchySectionChange alloc] initWithChangeType:_ASHierarchyChangeTypeInsert indexSet:sections animationOptions:options];
-  [_insertSectionChanges addObject:change];
+  [_originalInsertSectionChanges addObject:change];
 }
 
 - (void)reloadItems:(NSArray *)indexPaths animationOptions:(ASDataControllerAnimationOptions)options
@@ -222,8 +243,6 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
       _ASHierarchySectionChange *insertChange = [[_ASHierarchySectionChange alloc] initWithChangeType:_ASHierarchyChangeTypeInsert indexSet:newSections animationOptions:change.animationOptions];
       [_insertSectionChanges addObject:insertChange];
     }
-
-    _reloadSectionChanges = nil;
     
     [_ASHierarchySectionChange sortAndCoalesceChanges:_deleteSectionChanges];
     [_ASHierarchySectionChange sortAndCoalesceChanges:_insertSectionChanges];
@@ -275,6 +294,83 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
     // Ignore item inserts in reloaded(new)/inserted sections.
     [_ASHierarchyItemChange sortAndCoalesceChanges:_insertItemChanges ignoringChangesInSections:_insertedSections];
   }
+}
+
+- (void)_validateUpdate
+{
+  NSIndexSet *allReloadedSections = [_ASHierarchySectionChange allIndexesInSectionChanges:_reloadSectionChanges];
+  
+  NSInteger newSectionCount = _newItemCounts.count;
+  NSInteger oldSectionCount = _oldItemCounts.count;
+  
+  // Assert that the new section count is correct.
+  ASDisplayNodeAssert(newSectionCount == oldSectionCount + _insertedSections.count - _deletedSections.count, @"Invalid number of sections. The number of sections after the update (%ld) must be equal to the number of sections before the update (%ld) plus or minus the number of sections inserted or deleted (%ld inserted, %ld deleted)", (long)newSectionCount, (long)oldSectionCount, (long)_insertedSections.count, (long)_deletedSections.count);
+  
+  // Assert that no invalid deletes/reloads happened.
+  NSInteger invalidSectionDelete = NSNotFound;
+  if (oldSectionCount == 0) {
+    invalidSectionDelete = [_deletedSections firstIndex];
+  } else {
+    invalidSectionDelete = [_deletedSections indexGreaterThanIndex:oldSectionCount - 1];
+  }
+  ASDisplayNodeAssert(NSNotFound == invalidSectionDelete, @"Attempt to delete section %ld but there are only %ld sections before the update.", invalidSectionDelete, oldSectionCount);
+  
+  for (_ASHierarchyItemChange *change in _deleteItemChanges) {
+    for (NSIndexPath *indexPath in change.indexPaths) {
+      // Assert that item delete happened in a valid section.
+      ASDisplayNodeAssert(indexPath.section < oldSectionCount, @"Attempt to delete item %ld from section %ld, but there are only %ld sections before the update.", (long)indexPath.item, (long)indexPath.section, (long)oldSectionCount);
+      
+      // Assert that item delete happened to a valid item.
+      NSInteger oldItemCount = _oldItemCounts[indexPath.section].integerValue;
+      ASDisplayNodeAssert(indexPath.item < oldItemCount, @"Attempt to delete item %ld from section %ld, which only contains %ld items before the update.", (long)indexPath.item, (long)indexPath.section, (long)oldItemCount);
+    }
+  }
+  
+  for (_ASHierarchyItemChange *change in _insertItemChanges) {
+    for (NSIndexPath *indexPath in change.indexPaths) {
+      // Assert that item insert happened in a valid section.
+      ASDisplayNodeAssert(indexPath.section < newSectionCount, @"Attempt to insert item %ld into section %ld, but there are only %ld sections after the update.", (long)indexPath.item, (long)indexPath.section, (long)newSectionCount);
+      
+      // Assert that item delete happened to a valid item.
+      NSInteger newItemCount = _newItemCounts[indexPath.section].integerValue;
+      ASDisplayNodeAssert(indexPath.item < newItemCount, @"Attempt to insert item %ld into section %ld, which only contains %ld items after the update.", (long)indexPath.item, (long)indexPath.section, (long)newItemCount);
+    }
+  }
+  
+  // Assert that no sections were inserted out of bounds.
+  NSInteger invalidSectionInsert = NSNotFound;
+  if (newSectionCount == 0) {
+    invalidSectionInsert = [_insertedSections firstIndex];
+  } else {
+    invalidSectionInsert = [_insertedSections indexGreaterThanIndex:newSectionCount - 1];
+  }
+  ASDisplayNodeAssert(NSNotFound == invalidSectionInsert, @"Attempt to insert section %ld but there are only %ld sections after the update.", (long)invalidSectionInsert, (long)newSectionCount);
+  
+  [_oldItemCounts enumerateObjectsUsingBlock:^(NSNumber * _Nonnull oldItemCountObj, NSUInteger oldSection, BOOL * _Nonnull stop) {
+    NSUInteger oldItemCount = oldItemCountObj.unsignedIntegerValue;
+    // If section was reloaded, ignore.
+    if ([allReloadedSections containsIndex:oldSection]) {
+      return;
+    }
+    // If section was deleted, ignore.
+    NSUInteger newSection = [self newSectionForOldSection:oldSection];
+    if (newSection == NSNotFound) {
+      return;
+    }
+    
+    NSIndexSet *insertedItems = [self indexesForItemChangesOfType:_ASHierarchyChangeTypeInsert inSection:newSection];
+    NSIndexSet *deletedItems = [self indexesForItemChangesOfType:_ASHierarchyChangeTypeDelete inSection:newSection];
+    NSIndexSet *reloadedItems = [self indexesForItemChangesOfType:_ASHierarchyChangeTypeReload inSection:newSection];
+    
+    // Assert that no reloaded items were deleted.
+    NSUInteger deletedReloadedItem = [[deletedItems as_intersectionWithIndexes:reloadedItems] firstIndex];
+    ASDisplayNodeAssert(deletedReloadedItem == NSNotFound, @"Attempt to delete and reload the same item at index path %@", [NSIndexPath indexPathForItem:deletedReloadedItem inSection:oldSection]);
+    
+    // Assert that the new item count is correct.
+    NSUInteger newItemCount = _newItemCounts[newSection].unsignedIntegerValue;
+    ASDisplayNodeAssert(newItemCount == oldItemCount + insertedItems.count - deletedItems.count, @"Invalid number of items in section %ld. The number of items after the update (%ld) must be equal to the number of items before the update (%ld) plus or minus the number of items inserted or deleted (%ld inserted, %ld deleted).", (long)oldSection, (long)newItemCount, (long)oldItemCount, (long)insertedItems.count, (long)deletedItems.count);
+  }];
+  
 }
 
 - (NSString *)description

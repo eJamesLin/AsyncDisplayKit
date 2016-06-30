@@ -72,7 +72,7 @@ NSString * const ASDataControllerRowNodeKind = @"_ASDataControllerRowNodeKind";
   
   _editingTransactionQueue = [[NSOperationQueue alloc] init];
   _editingTransactionQueue.maxConcurrentOperationCount = 1; // Serial queue
-  _editingTransactionQueue.name = @"org.AsyncDisplayKit.ASDataController.editingTransactionQueue";
+  _editingTransactionQueue.name = [NSString stringWithFormat:@"org.AsyncDisplayKit.ASDataController.editingTransactionQueue:%p", self];
   
   _batchUpdateCounter = 0;
   
@@ -272,6 +272,7 @@ NSString * const ASDataControllerRowNodeKind = @"_ASDataControllerRowNodeKind";
 
 - (void)insertNodes:(NSArray *)nodes ofKind:(NSString *)kind atIndexPaths:(NSArray *)indexPaths completion:(ASDataControllerCompletionBlock)completionBlock
 {
+  ASDisplayNodeAssert([NSOperationQueue currentQueue] == _editingTransactionQueue, @"%@ must be called on the editing transaction queue", NSStringFromSelector(_cmd));
   if (!indexPaths.count || _dataSource == nil) {
     return;
   }
