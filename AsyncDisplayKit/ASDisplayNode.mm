@@ -2687,14 +2687,12 @@ static void _recursivelySetDisplaySuspended(ASDisplayNode *node, CALayer *layer,
 
 - (BOOL)shouldAnimateSizeChanges
 {
-  ASDisplayNodeAssertThreadAffinity(self);
   ASDN::MutexLocker l(_propertyLock);
   return _flags.shouldAnimateSizeChanges;
 }
 
 -(void)setShouldAnimateSizeChanges:(BOOL)shouldAnimateSizeChanges
 {
-  ASDisplayNodeAssertThreadAffinity(self);
   ASDN::MutexLocker l(_propertyLock);
   _flags.shouldAnimateSizeChanges = shouldAnimateSizeChanges;
 }
