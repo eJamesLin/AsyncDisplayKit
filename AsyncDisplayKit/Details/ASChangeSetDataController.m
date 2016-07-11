@@ -13,6 +13,7 @@
 #import "ASChangeSetDataController.h"
 #import "_ASHierarchyChangeSet.h"
 #import "ASAssert.h"
+#import "ASDataController+Subclasses.h"
 
 @implementation ASChangeSetDataController {
   NSInteger _changeSetBatchUpdateCounter;

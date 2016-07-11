@@ -66,7 +66,7 @@
     if (range.length == 1) {
       [result appendFormat:@"%lu ", (unsigned long)range.location];
     } else {
-      [result appendFormat:@"%lu-%lu ", (unsigned long)range.location, (unsigned long)NSMaxRange(range)];
+      [result appendFormat:@"%lu-%lu ", (unsigned long)range.location, (unsigned long)(NSMaxRange(range) - 1)];
     }
   }];
   [result appendString:@"}"];

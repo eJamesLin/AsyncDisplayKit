@@ -227,8 +227,8 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
     // Split reloaded sections into [delete(oldIndex), insert(newIndex)]
     
     // Give these their "pre-reloads" values. Once we add in the reloads we'll re-process them.
-    _deletedSections = [_ASHierarchySectionChange allIndexesInSectionChanges:_deleteSectionChanges];
-    _insertedSections = [_ASHierarchySectionChange allIndexesInSectionChanges:_insertSectionChanges];
+    _deletedSections = [_ASHierarchySectionChange allIndexesInSectionChanges:_originalDeleteSectionChanges];
+    _insertedSections = [_ASHierarchySectionChange allIndexesInSectionChanges:_originalInsertSectionChanges];
     _deleteSectionChanges = [_originalDeleteSectionChanges mutableCopy];
     _insertSectionChanges = [_originalInsertSectionChanges mutableCopy];
     
@@ -364,8 +364,8 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
     }
     
     NSIndexSet *insertedItems = [self indexesForItemChangesOfType:_ASHierarchyChangeTypeInsert inSection:newSection];
-    NSIndexSet *deletedItems = [self indexesForItemChangesOfType:_ASHierarchyChangeTypeDelete inSection:newSection];
-    NSIndexSet *reloadedItems = [self indexesForItemChangesOfType:_ASHierarchyChangeTypeReload inSection:newSection];
+    NSIndexSet *deletedItems = [self indexesForItemChangesOfType:_ASHierarchyChangeTypeDelete inSection:oldSection];
+    NSIndexSet *reloadedItems = [self indexesForItemChangesOfType:_ASHierarchyChangeTypeReload inSection:oldSection];
     
     // Assert that no reloaded items were deleted.
     NSUInteger deletedReloadedItem = [[deletedItems as_intersectionWithIndexes:reloadedItems] firstIndex];
